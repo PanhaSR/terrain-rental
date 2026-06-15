@@ -239,6 +239,10 @@ LOCK TABLES `users` WRITE;
 INSERT INTO `users` VALUES (1,'2026-06-15 15:53:02.492025','owner@example.com','Sok Dara','2026-06-15 15:53:02.492067'),(2,'2026-06-15 15:53:02.519953','renter@example.com','Chan Vibol','2026-06-15 15:53:02.520003');
 /*!40000 ALTER TABLE `users` ENABLE KEYS */;
 UNLOCK TABLES;
+
+--
+-- Dumping routines for database 'sreng_panha-db'
+--
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
 
 /*!40101 SET SQL_MODE=@OLD_SQL_MODE */;
@@ -249,4 +253,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2026-06-15 15:54:18
+-- Dump completed on 2026-06-15 16:00:00

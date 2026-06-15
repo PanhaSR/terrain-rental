@@ -1,0 +1,83 @@
+---
+- name: Q3 - Deploy Terrain Rental Web Container
+  hosts: webservers
+  gather_facts: false
+  vars:
+    app_dir: /app
+    mysql_host: terrain-mysql
+    mysql_user: root
+    mysql_password: Hello@123
+    mysql_database: sreng_panha-db
+
+  tasks:
+
+    # ── 1. GIT PULL ──────────────────────────────────────────────────────────
+    - name: Reset any local changes
+      raw: cd /app && git checkout -- . && git clean -fd
+      register: reset_result
+
+    - name: Show reset result
+      debug:
+        msg: "{{ reset_result.stdout | default('clean') }}"
+
+    - name: Git pull latest code from GitHub
+      raw: cd /app && git pull origin main
+      register: git_result
+
+    - name: Show git pull result
+      debug:
+        msg: "{{ git_result.stdout }}"
+
+    # ── 2. BUILD - Maven (replaces composer for Java project) ────────────────
+    - name: Maven clean install (composer equivalent for Spring Boot)
+      raw: cd /app && mvn clean install -DskipTests -q && echo "Maven build SUCCESS"
+      register: maven_result
+
+    - name: Show maven build result
+      debug:
+        msg: "{{ maven_result.stdout }}"
+
+    # ── 3. BUILD - NPM (frontend assets) ─────────────────────────────────────
+    - name: Check if package.json exists
+      raw: test -f /app/package.json && echo "found" || echo "not found"
+      register: npm_check
+
+    - name: NPM install (if package.json exists)
+      raw: cd /app && npm install && npm run build && echo "NPM build SUCCESS"
+      register: npm_result
+      ignore_errors: true
+      when: "'found' in npm_check.stdout"
+
+    - name: Show npm result
+      debug:
+        msg: "{{ npm_result.stdout | default('No package.json - Spring Boot project, npm not required') }}"
+
+    # ── 4. RUN TESTS with H2/SQLite test database ────────────────────────────
+    - name: Run tests using H2 in-memory test database (SQLite equivalent)
+      raw: cd /app && mvn clean test -Dspring.profiles.active=test 2>&1 | tail -20
+      register: test_result
+      ignore_errors: true
+
+    - name: Show test results
+      debug:
+        msg: "{{ test_result.stdout }}"
+
+    # ── 5. BACKUP MySQL DATABASE ──────────────────────────────────────────────
+    - name: Backup sreng_panha-db from MySQL container
+      raw: >
+        mysqldump
+        -h terrain-mysql
+        -uroot
+        -pHello@123
+        sreng_panha-db
+        --single-transaction
+        --routines
+        --triggers
+        > /app/backup.sql
+        && echo "Backup completed successfully"
+        && ls -lh /app/backup.sql
+      register: backup_result
+
+    - name: Show backup result
+      debug:
+        msg: "{{ backup_result.stdout }}"
