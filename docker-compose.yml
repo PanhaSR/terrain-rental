@@ -77,6 +77,28 @@ services:
     networks:
       - terrain-net
 
+  # ── phpMyAdmin ─────────────────────────────────────────────────────────────
+  phpmyadmin:
+    image: phpmyadmin:latest
+    container_name: terrain-phpmyadmin
+    restart: unless-stopped
+    ports:
+      - "0.0.0.0:8888:80"
+    environment:
+      PMA_HOST: db
+      PMA_PORT: 3306
+      PMA_USER: root
+      PMA_PASSWORD: Hello@123
+      MYSQL_ROOT_PASSWORD: Hello@123
+      # Allow access from any IP (remote PC)
+      PMA_ARBITRARY: 1
+      UPLOAD_LIMIT: 300M
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - terrain-net
+
 volumes:
   mysql_data:
 
