@@ -1,0 +1,155 @@
+# =============================================================================
+#  Terrain Rental - Kubernetes Manifests with Load Balancer
+#  sreng_panha - DB: sreng_panha-db
+# =============================================================================
+
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: terrain-rental
+
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: db-secret
+  namespace: terrain-rental
+type: Opaque
+stringData:
+  MYSQL_ROOT_PASSWORD: "Hello@123"
+  MYSQL_DATABASE: "sreng_panha-db"
+  SPRING_DATASOURCE_PASSWORD: "Hello@123"
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: web-config
+  namespace: terrain-rental
+data:
+  SPRING_DATASOURCE_URL: "jdbc:mysql://mysql-svc:3306/sreng_panha-db?createDatabaseIfNotExist=true&useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true"
+  SPRING_DATASOURCE_USERNAME: "root"
+  SPRING_JPA_HIBERNATE_DDL_AUTO: "update"
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: mysql-pvc
+  namespace: terrain-rental
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 2Gi
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mysql
+  namespace: terrain-rental
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mysql
+  template:
+    metadata:
+      labels:
+        app: mysql
+    spec:
+      containers:
+        - name: mysql
+          image: mysql:8.4
+          ports:
+            - containerPort: 3306
+          env:
+            - name: MYSQL_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: db-secret
+                  key: MYSQL_ROOT_PASSWORD
+            - name: MYSQL_DATABASE
+              valueFrom:
+                secretKeyRef:
+                  name: db-secret
+                  key: MYSQL_DATABASE
+          volumeMounts:
+            - name: mysql-storage
+              mountPath: /var/lib/mysql
+      volumes:
+        - name: mysql-storage
+          persistentVolumeClaim:
+            claimName: mysql-pvc
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mysql-svc
+  namespace: terrain-rental
+spec:
+  selector:
+    app: mysql
+  ports:
+    - port: 3306
+      targetPort: 3306
+
+---
+# Web Deployment with 2 replicas = Load Balanced
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: web
+  namespace: terrain-rental
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: web
+  template:
+    metadata:
+      labels:
+        app: web
+    spec:
+      containers:
+        - name: web
+          image: terrain-rental-web:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 22
+            - containerPort: 80
+            - containerPort: 8080
+          envFrom:
+            - configMapRef:
+                name: web-config
+          env:
+            - name: SPRING_DATASOURCE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: db-secret
+                  key: SPRING_DATASOURCE_PASSWORD
+
+---
+# Load Balancer Service - exposes port 8090 for website, 22 for SSH
+apiVersion: v1
+kind: Service
+metadata:
+  name: web-lb-svc
+  namespace: terrain-rental
+spec:
+  type: NodePort
+  selector:
+    app: web
+  ports:
+    - name: http
+      port: 80
+      targetPort: 8080
+      nodePort: 30090
+    - name: ssh
+      port: 22
+      targetPort: 22
+      nodePort: 30022

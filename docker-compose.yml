@@ -1,5 +1,3 @@
-version: "3.9"
-
 services:
 
   db:
@@ -15,22 +13,24 @@ services:
       - mysql_data:/var/lib/mysql
     networks:
       - terrain-net
+    dns:
+      - 8.8.8.8
+      - 8.8.4.4
     healthcheck:
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-pHello@123"]
       interval: 10s
       timeout: 5s
       retries: 10
 
-  web:
+  web1:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: terrain-web
+    container_name: terrain-web1
     restart: unless-stopped
-    ports:
-      - "80:80"
-      - "8080:8080"
-      - "22:22"
+    dns:
+      - 8.8.8.8
+      - 8.8.4.4
     environment:
       SPRING_DATASOURCE_URL: jdbc:mysql://db:3306/sreng_panha-db?createDatabaseIfNotExist=true&useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
       SPRING_DATASOURCE_USERNAME: root
@@ -39,6 +39,41 @@ services:
     depends_on:
       db:
         condition: service_healthy
+    networks:
+      - terrain-net
+
+  web2:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: terrain-web2
+    restart: unless-stopped
+    dns:
+      - 8.8.8.8
+      - 8.8.4.4
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://db:3306/sreng_panha-db?createDatabaseIfNotExist=true&useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: Hello@123
+      SPRING_JPA_HIBERNATE_DDL_AUTO: update
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - terrain-net
+
+  loadbalancer:
+    image: nginx:alpine
+    container_name: terrain-lb
+    restart: unless-stopped
+    ports:
+      - "8091:80"
+      - "2223:22"
+    volumes:
+      - ./nginx-lb.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      - web1
+      - web2
     networks:
       - terrain-net
 
