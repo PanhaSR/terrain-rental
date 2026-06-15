@@ -9,52 +9,40 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/terrain-images")
-@CrossOrigin
 public class TerrainImageController {
 
-    private final TerrainImageRepository repository;
+    private final TerrainImageRepository terrainImageRepository;
 
-    public TerrainImageController(TerrainImageRepository repository) {
-        this.repository = repository;
+    public TerrainImageController(TerrainImageRepository terrainImageRepository) {
+        this.terrainImageRepository = terrainImageRepository;
     }
 
     @GetMapping
-    public List<TerrainImage> getAll() {
-        return repository.findAll();
+    public List<TerrainImage> findAll() {
+        return terrainImageRepository.findAll();
+    }
+
+    @GetMapping("/terrain/{terrainId}")
+    public List<TerrainImage> findByTerrain(@PathVariable Long terrainId) {
+        return terrainImageRepository.findByTerrainId(terrainId);
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<TerrainImage> getById(@PathVariable Long id) {
-        return repository.findById(id)
+    public ResponseEntity<TerrainImage> findById(@PathVariable Long id) {
+        return terrainImageRepository.findById(id)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }
 
-    @GetMapping("/terrain/{terrainId}")
-    public List<TerrainImage> getByTerrain(@PathVariable Long terrainId) {
-        return repository.findByTerrainId(terrainId);
-    }
-
     @PostMapping
     public TerrainImage create(@RequestBody TerrainImage image) {
-        return repository.save(image);
-    }
-
-    @PutMapping("/{id}")
-    public ResponseEntity<TerrainImage> update(@PathVariable Long id, @RequestBody TerrainImage payload) {
-        return repository.findById(id).map(image -> {
-            image.setImagePath(payload.getImagePath());
-            if (payload.getTerrain() != null) {
-                image.setTerrain(payload.getTerrain());
-            }
-            return ResponseEntity.ok(repository.save(image));
-        }).orElse(ResponseEntity.notFound().build());
+        return terrainImageRepository.save(image);
     }
 
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> delete(@PathVariable Long id) {
-        if (!repository.existsById(id)) return ResponseEntity.notFound().build();
-        repository.deleteById(id);
+        if (!terrainImageRepository.existsById(id)) return ResponseEntity.notFound().build();
+        terrainImageRepository.deleteById(id);
         return ResponseEntity.noContent().build();
     }
 }

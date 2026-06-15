@@ -9,7 +9,6 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/terrains")
-@CrossOrigin
 public class TerrainController {
 
     private final TerrainRepository terrainRepository;
@@ -19,20 +18,20 @@ public class TerrainController {
     }
 
     @GetMapping
-    public List<Terrain> getAll() {
+    public List<Terrain> findAll() {
         return terrainRepository.findAll();
     }
 
+    @GetMapping("/available")
+    public List<Terrain> findAvailable() {
+        return terrainRepository.findByIsAvailableTrue();
+    }
+
     @GetMapping("/{id}")
-    public ResponseEntity<Terrain> getById(@PathVariable Long id) {
+    public ResponseEntity<Terrain> findById(@PathVariable Long id) {
         return terrainRepository.findById(id)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
-    }
-
-    @GetMapping("/available")
-    public List<Terrain> getAvailable() {
-        return terrainRepository.findByIsAvailableTrue();
     }
 
     @PostMapping
@@ -42,26 +41,15 @@ public class TerrainController {
 
     @PutMapping("/{id}")
     public ResponseEntity<Terrain> update(@PathVariable Long id, @RequestBody Terrain payload) {
-        return terrainRepository.findById(id).map(terrain -> {
-            terrain.setTitle(payload.getTitle());
-            terrain.setDescription(payload.getDescription());
-            terrain.setLocation(payload.getLocation());
-            terrain.setAreaSize(payload.getAreaSize());
-            terrain.setPricePerDay(payload.getPricePerDay());
-            terrain.setAvailableFrom(payload.getAvailableFrom());
-            terrain.setAvailableTo(payload.getAvailableTo());
-            if (payload.getIsAvailable() != null) {
-                terrain.setIsAvailable(payload.getIsAvailable());
-            }
-            return ResponseEntity.ok(terrainRepository.save(terrain));
+        return terrainRepository.findById(id).map(existing -> {
+            payload.setId(id);
+            return ResponseEntity.ok(terrainRepository.save(payload));
         }).orElse(ResponseEntity.notFound().build());
     }
 
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> delete(@PathVariable Long id) {
-        if (!terrainRepository.existsById(id)) {
-            return ResponseEntity.notFound().build();
-        }
+        if (!terrainRepository.existsById(id)) return ResponseEntity.notFound().build();
         terrainRepository.deleteById(id);
         return ResponseEntity.noContent().build();
     }

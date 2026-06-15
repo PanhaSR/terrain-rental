@@ -1,0 +1,50 @@
+version: "3.9"
+
+services:
+
+  db:
+    image: mysql:8.4
+    container_name: terrain-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: Hello@123
+      MYSQL_DATABASE: sreng_panha-db
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    networks:
+      - terrain-net
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-pHello@123"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: terrain-web
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "8080:8080"
+      - "22:22"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://db:3306/sreng_panha-db?createDatabaseIfNotExist=true&useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: Hello@123
+      SPRING_JPA_HIBERNATE_DDL_AUTO: update
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - terrain-net
+
+volumes:
+  mysql_data:
+
+networks:
+  terrain-net:
+    driver: bridge
